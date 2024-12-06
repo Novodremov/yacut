@@ -1,9 +1,10 @@
+from http import HTTPStatus
+
 from flask import jsonify, request
 
-from . import app, db
+from . import app
 from .error_handlers import InvalidAPIUsage
 from .models import URLMap
-from .utils import get_unique_short_id
 
 
 @app.route('/api/id/', methods=['POST'])
@@ -12,22 +13,13 @@ def add_short_link():
         raise InvalidAPIUsage('Отсутствует тело запроса')
     if 'url' not in data:
         raise InvalidAPIUsage('"url" является обязательным полем!')
-    if 'custom_id' in data and data['custom_id']:
-        if URLMap.query.filter_by(short=data['custom_id']).first() is not None:
-            raise InvalidAPIUsage(
-                'Предложенный вариант короткой ссылки уже существует.')
-    else:
-        data['custom_id'] = get_unique_short_id()
-    url = URLMap()
-    url.from_dict(data)
-    db.session.add(url)
-    db.session.commit()
-    return jsonify(url.to_dict()), 201
+    short = data['custom_id'] if 'custom_id' in data else None
+    return URLMap.add_urlmap(data['url'], short, api=True)
 
 
 @app.route('/api/id/<string:short_id>/', methods=['GET'])
 def get_short_link(short_id):
-    url = URLMap.query.filter_by(short=short_id).first()
+    url = URLMap.get_by_custom_id(short_id)
     if url is None:
-        raise InvalidAPIUsage('Указанный id не найден', 404)
-    return jsonify({'url': url.original}), 200
+        raise InvalidAPIUsage('Указанный id не найден', HTTPStatus.NOT_FOUND)
+    return jsonify({'url': url.original}), HTTPStatus.OK

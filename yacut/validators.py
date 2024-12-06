@@ -1,17 +1,20 @@
 import re
 
+from wtforms import ValidationError
+
 from .constants import (API_SHORT_URL_POST_NAME, NAME_ERROR_MESSAGES,
-                        VALID_LENGTHS)
+                        REGEX_PATTERN, VALID_LENGTHS)
 from .error_handlers import InvalidAPIUsage
 
 
-def checking_name(value):
-    if not re.match("^[a-zA-Z0-9]*$", value):
+def validate_api_custom_id(value):
+    if not re.match(REGEX_PATTERN, value):
         raise InvalidAPIUsage(NAME_ERROR_MESSAGES[API_SHORT_URL_POST_NAME])
 
 
 def validate_custom_id(form, field):
-    checking_name(field.data)
+    if not re.match(REGEX_PATTERN, field.data):
+        raise ValidationError(NAME_ERROR_MESSAGES[API_SHORT_URL_POST_NAME])
 
 
 def validate_url_length(field, value):
