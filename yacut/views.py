@@ -1,7 +1,10 @@
-from flask import redirect, render_template
+from urllib.parse import urljoin
+
+from flask import flash, redirect, render_template, url_for
 
 from . import app
 from .constants import MAIN_PAGE_TEMPLATE
+from .error_handlers import MakingUrlException
 from .forms import URLMapForm
 from .models import URLMap
 
@@ -11,7 +14,15 @@ def index_view():
     form = URLMapForm()
     if form.validate_on_submit():
         short = form.custom_id.data
-        return URLMap.add_urlmap(form.original_link.data, short, False, form)
+        try:
+            url = URLMap.add_urlmap(form.original_link.data, short, False)
+            base_url = url_for('index_view', _external=True)
+            new_url = urljoin(base_url, url.short)
+            return render_template(MAIN_PAGE_TEMPLATE, form=form,
+                                   new_url=new_url)
+        except MakingUrlException as error:
+            flash(error)
+            return render_template(MAIN_PAGE_TEMPLATE, form=form)
     return render_template(MAIN_PAGE_TEMPLATE, form=form)
 
 
